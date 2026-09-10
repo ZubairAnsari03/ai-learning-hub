@@ -1,0 +1,6 @@
+NEXT STEP
+1. Keep your current v3 website.
+2. Put course-access.html and access.css in the same website folder.
+3. Later, after server-side Razorpay verification is added, redirect verified payments here.
+4. Replace the five # placeholders only with course URLs you own or are authorized to distribute.
+Do not put Razorpay secret keys in frontend JavaScript.
