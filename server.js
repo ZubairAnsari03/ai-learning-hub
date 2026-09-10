@@ -2,7 +2,6 @@ const express = require("express");
 const path = require("path");
 const crypto = require("crypto");
 require("dotenv").config();
-
 const Razorpay = require("razorpay");
 
 const app = express();
@@ -55,17 +54,19 @@ app.get("/payment/callback", async (req, res) => {
       razorpay_signature
     } = req.query;
 
+    // Required callback fields
     if (
-  !razorpay_payment_id ||
-  !razorpay_payment_link_id ||
-  !razorpay_payment_link_status ||
-  !razorpay_signature
-) {
-  return res.status(400).send("Invalid payment callback.");
-}
+      !razorpay_payment_id ||
+      !razorpay_payment_link_id ||
+      !razorpay_payment_link_status ||
+      !razorpay_signature
+    ) {
+      return res.status(400).send("Invalid payment callback.");
+    }
 
-const paymentLinkReferenceId =
-  razorpay_payment_link_reference_id || "";
+    // Reference ID is optional
+    const paymentLinkReferenceId =
+      razorpay_payment_link_reference_id || "";
 
     // Verify Razorpay Payment Link signature
     const payload =
@@ -82,7 +83,9 @@ const paymentLinkReferenceId =
       .update(payload)
       .digest("hex");
 
+    // Safe signature comparison
     if (
+      expectedSignature.length !== razorpay_signature.length ||
       !crypto.timingSafeEqual(
         Buffer.from(expectedSignature),
         Buffer.from(razorpay_signature)
@@ -96,7 +99,7 @@ const paymentLinkReferenceId =
       razorpay_payment_link_id
     );
 
-    // Make sure THIS is our ₹149 course payment
+    // Make sure this is our ₹149 course payment
     if (
       paymentLink.status !== "paid" ||
       paymentLink.amount !== 14900
@@ -112,7 +115,7 @@ const paymentLinkReferenceId =
       createdAt: Date.now()
     });
 
-    // Access valid for 24 hours in this initial version
+    // Access valid for 24 hours
     setTimeout(() => {
       accessSessions.delete(token);
     }, 24 * 60 * 60 * 1000);
