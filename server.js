@@ -56,20 +56,22 @@ app.get("/payment/callback", async (req, res) => {
     } = req.query;
 
     if (
-      !razorpay_payment_id ||
-      !razorpay_payment_link_id ||
-      !razorpay_payment_link_reference_id ||
-      !razorpay_payment_link_status ||
-      !razorpay_signature
-    ) {
-      return res.status(400).send("Invalid payment callback.");
-    }
+  !razorpay_payment_id ||
+  !razorpay_payment_link_id ||
+  !razorpay_payment_link_status ||
+  !razorpay_signature
+) {
+  return res.status(400).send("Invalid payment callback.");
+}
+
+const paymentLinkReferenceId =
+  razorpay_payment_link_reference_id || "";
 
     // Verify Razorpay Payment Link signature
     const payload =
       razorpay_payment_link_id +
       "|" +
-      razorpay_payment_link_reference_id +
+      paymentLinkReferenceId +
       "|" +
       razorpay_payment_link_status +
       "|" +
