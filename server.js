@@ -1,5 +1,4 @@
 const express = require("express");
-const path = require("path");
 const crypto = require("crypto");
 require("dotenv").config();
 const Razorpay = require("razorpay");
@@ -12,14 +11,60 @@ const razorpay = new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET
 });
 
-// Temporary access sessions
-const accessSessions = new Map();
-
 app.use(express.json());
 
-// Protect course-access page
+/* =========================
+   PERMANENT ACCESS TOKEN
+========================= */
+
+const ACCESS_SECRET = process.env.RAZORPAY_KEY_SECRET;
+
+function createAccessToken(paymentId) {
+  const data = `course-access|${paymentId}`;
+
+  const signature = crypto
+    .createHmac("sha256", ACCESS_SECRET)
+    .update(data)
+    .digest("hex");
+
+  return `${paymentId}.${signature}`;
+}
+
+function verifyAccessToken(token) {
+  if (!token) return false;
+
+  const parts = token.split(".");
+  if (parts.length !== 2) return false;
+
+  const paymentId = parts[0];
+  const signature = parts[1];
+
+  const data = `course-access|${paymentId}`;
+
+  const expectedSignature = crypto
+    .createHmac("sha256", ACCESS_SECRET)
+    .update(data)
+    .digest("hex");
+
+  if (signature.length !== expectedSignature.length) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(
+    Buffer.from(signature),
+    Buffer.from(expectedSignature)
+  );
+}
+
+/* =========================
+   PROTECT COURSE PAGES
+========================= */
+
 app.use((req, res, next) => {
-  const protectedPages = ["/course-access.html", "/access.html"];
+  const protectedPages = [
+    "/course-access.html",
+    "/access.html"
+  ];
 
   if (protectedPages.includes(req.path)) {
     const token = req.headers.cookie
@@ -28,7 +73,7 @@ app.use((req, res, next) => {
       .find(x => x.startsWith("course_access="))
       ?.split("=")[1];
 
-    if (!token || !accessSessions.has(token)) {
+    if (!verifyAccessToken(token)) {
       return res.status(403).send(`
         <h1>Access Restricted</h1>
         <p>Please complete and verify your payment first.</p>
@@ -40,10 +85,16 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve website
+/* =========================
+   SERVE WEBSITE
+========================= */
+
 app.use(express.static(__dirname));
 
-// Razorpay Payment Link callback
+/* =========================
+   RAZORPAY CALLBACK
+========================= */
+
 app.get("/payment/callback", async (req, res) => {
   try {
     const {
@@ -54,7 +105,6 @@ app.get("/payment/callback", async (req, res) => {
       razorpay_signature
     } = req.query;
 
-    // Required callback fields
     if (
       !razorpay_payment_id ||
       !razorpay_payment_link_id ||
@@ -64,26 +114,28 @@ app.get("/payment/callback", async (req, res) => {
       return res.status(400).send("Invalid payment callback.");
     }
 
-    // Reference ID is optional
-    const paymentLinkReferenceId =
+    const referenceId =
       razorpay_payment_link_reference_id || "";
 
-    // Verify Razorpay Payment Link signature
+    /* Verify Razorpay signature */
+
     const payload =
       razorpay_payment_link_id +
       "|" +
-      paymentLinkReferenceId +
+      referenceId +
       "|" +
       razorpay_payment_link_status +
       "|" +
       razorpay_payment_id;
 
     const expectedSignature = crypto
-      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+      .createHmac(
+        "sha256",
+        process.env.RAZORPAY_KEY_SECRET
+      )
       .update(payload)
       .digest("hex");
 
-    // Safe signature comparison
     if (
       expectedSignature.length !== razorpay_signature.length ||
       !crypto.timingSafeEqual(
@@ -91,51 +143,63 @@ app.get("/payment/callback", async (req, res) => {
         Buffer.from(razorpay_signature)
       )
     ) {
-      return res.status(403).send("Payment verification failed.");
+      return res.status(403).send(
+        "Payment verification failed."
+      );
     }
 
-    // Fetch Payment Link directly from Razorpay
-    const paymentLink = await razorpay.paymentLink.fetch(
-      razorpay_payment_link_id
-    );
+    /* Fetch payment link */
 
-    // Make sure this is our ₹149 course payment
+    const paymentLink =
+      await razorpay.paymentLink.fetch(
+        razorpay_payment_link_id
+      );
+
+    /* Verify OUR ₹149 course payment */
+
     if (
       paymentLink.status !== "paid" ||
       paymentLink.amount !== 14900
     ) {
-      return res.status(403).send("Payment is not valid for this course.");
+      return res.status(403).send(
+        "Payment is not valid for this course."
+      );
     }
 
-    // Create temporary access token
-    const token = crypto.randomBytes(32).toString("hex");
+    /* Create permanent access token */
 
-    accessSessions.set(token, {
-      paymentId: razorpay_payment_id,
-      createdAt: Date.now()
-    });
+    const token =
+      createAccessToken(razorpay_payment_id);
 
-    // Access valid for 24 hours
-    setTimeout(() => {
-      accessSessions.delete(token);
-    }, 24 * 60 * 60 * 1000);
+    /*
+      10 years.
+      Browser will keep the access cookie.
+      Render restart/redeploy will NOT delete it.
+    */
 
-    // Give browser the secure access cookie
     res.setHeader(
       "Set-Cookie",
-      `course_access=${token}; HttpOnly; SameSite=Lax; Path=/`
+      `course_access=${token}; Max-Age=315360000; HttpOnly; SameSite=Lax; Path=/; Secure`
     );
 
-    // Send paid customer to course access
     res.redirect("/course-access.html");
 
   } catch (error) {
-    console.error("Payment verification error:", error);
-    res.status(500).send("Unable to verify payment.");
+    console.error(
+      "Payment verification error:",
+      error
+    );
+
+    res.status(500).send(
+      "Unable to verify payment."
+    );
   }
 });
 
-// Server status
+/* =========================
+   SERVER STATUS
+========================= */
+
 app.get("/status", (req, res) => {
   res.json({
     success: true,
@@ -143,6 +207,12 @@ app.get("/status", (req, res) => {
   });
 });
 
+/* =========================
+   START SERVER
+========================= */
+
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`AI Learning Hub running on port ${PORT}`);
+  console.log(
+    `AI Learning Hub running on port ${PORT}`
+  );
 });
