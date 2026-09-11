@@ -232,33 +232,22 @@ app.get("/payment/callback", async (req, res) => {
 // =====================================================
 
 app.get("/payment/recover", async (req, res) => {
-
   try {
-
     const paymentId = req.query.payment_id;
 
     if (!paymentId) {
-      return res.status(400).send(`
-        <h2>Payment ID required</h2>
-        <p>Please use your Razorpay Payment ID.</p>
-      `);
+      return res.status(400).send("Payment ID required.");
     }
 
-    console.log(
-      "Recovery requested for:",
-      paymentId
-    );
+    console.log("Recovery requested:", paymentId);
 
-    // Fetch actual payment from Razorpay
-    const payment =
-      await razorpay.payments.fetch(paymentId);
+    // Fetch actual payment
+    const payment = await razorpay.payments.fetch(paymentId);
 
-    console.log("Payment found:", payment);
+    console.log("Payment status:", payment.status);
+    console.log("Payment amount:", payment.amount);
 
-    // -------------------------------------------------
-    // VERIFY PAYMENT
-    // -------------------------------------------------
-
+    // Verify successful ₹149 payment
     if (
       payment.status !== "captured" ||
       payment.amount !== 14900 ||
@@ -266,75 +255,51 @@ app.get("/payment/recover", async (req, res) => {
     ) {
       return res.status(403).send(`
         <h2>Payment could not be verified.</h2>
-        <p>The payment is not a valid ₹149 course payment.</p>
+        <p>This is not a valid ₹149 successful payment.</p>
       `);
     }
 
-    // -------------------------------------------------
-    // VERIFY THAT PAYMENT BELONGS TO OUR PAYMENT LINK
-    // -------------------------------------------------
+    // Find the Payment Link connected to this payment ID
+    const result = await razorpay.paymentLink.all({
+      payment_id: paymentId
+    });
 
-    const paymentLink =
-      await razorpay.paymentLink.fetch(
-        "plink_TaNFbzMP9JP4eG"
-      );
+    console.log("Payment links found:", result);
 
-    if (
-      paymentLink.status !== "paid" ||
-      paymentLink.amount !== 14900
-    ) {
-      return res.status(403).send(
-        "Course payment link is not valid."
-      );
-    }
+    const links = result.payment_links || [];
 
-    // Payment must appear in this payment link
-    const linkedPayments =
-      paymentLink.payments || [];
+    const courseLink = links.find(
+      link =>
+        link.id === "plink_TaNFbzMP9JP4eG" &&
+        link.amount === 14900 &&
+        link.status === "paid"
+    );
 
-    const belongsToCourse =
-      linkedPayments.some(
-        p =>
-          p.payment_id === paymentId ||
-          p.id === paymentId
-      );
-
-    if (!belongsToCourse) {
+    if (!courseLink) {
       return res.status(403).send(`
-        <h2>Payment verification failed.</h2>
-        <p>This payment is not linked to the course payment.</p>
+        <h2>Course payment link not found.</h2>
+        <p>The payment was successful, but it could not be matched to the course payment link.</p>
       `);
     }
 
-    // -------------------------------------------------
-    // GRANT ACCESS
-    // -------------------------------------------------
-
-    const token =
-      createAccessToken(paymentId);
+    // Create permanent browser access
+    const token = createAccessToken(paymentId);
 
     res.setHeader(
       "Set-Cookie",
       `course_access=${token}; Max-Age=315360000; HttpOnly; SameSite=Lax; Path=/; Secure`
     );
 
-    console.log(
-      "Recovery successful:",
-      paymentId
-    );
+    console.log("COURSE ACCESS GRANTED:", paymentId);
 
     return res.redirect("/course-access.html");
 
   } catch (error) {
-
-    console.error(
-      "Recovery error:",
-      error
-    );
+    console.error("Recovery error:", error);
 
     return res.status(500).send(`
       <h2>Payment recovery failed.</h2>
-      <p>Please check the Razorpay Payment ID.</p>
+      <p>Please check the Render logs.</p>
     `);
   }
 });
