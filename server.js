@@ -16,10 +16,6 @@ app.use(express.urlencoded({ extended: true }));
 
 const ACCESS_SECRET = process.env.RAZORPAY_KEY_SECRET;
 
-// =====================================================
-// CREATE ACCESS TOKEN
-// =====================================================
-
 function createAccessToken(paymentId) {
   const data = `course-access|${paymentId}`;
 
@@ -31,25 +27,18 @@ function createAccessToken(paymentId) {
   return `${paymentId}.${signature}`;
 }
 
-// =====================================================
-// VERIFY ACCESS TOKEN
-// =====================================================
-
 function verifyAccessToken(token) {
   if (!token) return false;
 
   const parts = token.split(".");
-
   if (parts.length !== 2) return false;
 
   const paymentId = parts[0];
   const signature = parts[1];
 
-  const data = `course-access|${paymentId}`;
-
   const expectedSignature = crypto
     .createHmac("sha256", ACCESS_SECRET)
-    .update(data)
+    .update(`course-access|${paymentId}`)
     .digest("hex");
 
   if (signature.length !== expectedSignature.length) {
@@ -62,10 +51,7 @@ function verifyAccessToken(token) {
   );
 }
 
-// =====================================================
-// PROTECT COURSE PAGES
-// =====================================================
-
+// Protect course pages
 app.use((req, res, next) => {
   const protectedPages = [
     "/course-access.html",
@@ -73,7 +59,6 @@ app.use((req, res, next) => {
   ];
 
   if (protectedPages.includes(req.path)) {
-
     const token = req.headers.cookie
       ?.split(";")
       .map(x => x.trim())
@@ -83,7 +68,7 @@ app.use((req, res, next) => {
     if (!verifyAccessToken(token)) {
       return res.status(403).send(`
         <h1>Access Restricted</h1>
-        <p>Please complete and verify your payment first.</p>
+        <p>Please complete your payment first.</p>
         <a href="/">Back to AI Learning Hub</a>
       `);
     }
@@ -92,59 +77,68 @@ app.use((req, res, next) => {
   next();
 });
 
-// =====================================================
-// SERVE WEBSITE
-// =====================================================
-
 app.use(express.static(__dirname));
 
-// =====================================================
-// RAZORPAY CALLBACK
-// =====================================================
+// ==========================================
+// CREATE ₹149 RAZORPAY ORDER
+// ==========================================
 
-app.get("/payment/callback", async (req, res) => {
-
+app.post("/create-order", async (req, res) => {
   try {
+    const order = await razorpay.orders.create({
+      amount: 14900,
+      currency: "INR",
+      receipt: `course_${Date.now()}`,
+      notes: {
+        product: "AI/ML Engineer Course 2026"
+      }
+    });
 
-    console.log("Razorpay callback received:", req.query);
+    console.log("Order created:", order.id);
 
+    res.json({
+      success: true,
+      orderId: order.id,
+      amount: order.amount,
+      currency: order.currency,
+      keyId: process.env.RAZORPAY_KEY_ID
+    });
+
+  } catch (error) {
+    console.error("Create order error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Unable to create payment."
+    });
+  }
+});
+
+// ==========================================
+// VERIFY PAYMENT
+// ==========================================
+
+app.post("/verify-payment", async (req, res) => {
+  try {
     const {
+      razorpay_order_id,
       razorpay_payment_id,
-      razorpay_payment_link_id,
-      razorpay_payment_link_reference_id,
-      razorpay_payment_link_status,
       razorpay_signature
-    } = req.query;
-
-    // -------------------------------------------------
-    // CHECK CALLBACK PARAMETERS
-    // -------------------------------------------------
+    } = req.body;
 
     if (
+      !razorpay_order_id ||
       !razorpay_payment_id ||
-      !razorpay_payment_link_id ||
-      !razorpay_payment_link_status ||
       !razorpay_signature
     ) {
-      return res.status(400).send(`
-        <h2>Invalid payment callback.</h2>
-        <p>Please return to the website and try again.</p>
-      `);
+      return res.status(400).json({
+        success: false,
+        message: "Missing payment details."
+      });
     }
 
-    const referenceId =
-      razorpay_payment_link_reference_id || "";
-
-    // -------------------------------------------------
-    // VERIFY RAZORPAY SIGNATURE
-    // -------------------------------------------------
-
-    const payload =
-      razorpay_payment_link_id +
-      "|" +
-      referenceId +
-      "|" +
-      razorpay_payment_link_status +
+    const body =
+      razorpay_order_id +
       "|" +
       razorpay_payment_id;
 
@@ -153,7 +147,7 @@ app.get("/payment/callback", async (req, res) => {
         "sha256",
         process.env.RAZORPAY_KEY_SECRET
       )
-      .update(payload)
+      .update(body)
       .digest("hex");
 
     if (
@@ -163,39 +157,31 @@ app.get("/payment/callback", async (req, res) => {
         Buffer.from(razorpay_signature)
       )
     ) {
-      return res.status(403).send(
-        "Payment verification failed."
-      );
+      return res.status(403).json({
+        success: false,
+        message: "Payment verification failed."
+      });
     }
 
-    // -------------------------------------------------
-    // FETCH PAYMENT LINK
-    // -------------------------------------------------
-
-    const paymentLink =
-      await razorpay.paymentLink.fetch(
-        razorpay_payment_link_id
+    // Fetch actual payment from Razorpay
+    const payment =
+      await razorpay.payments.fetch(
+        razorpay_payment_id
       );
-
-    console.log("Payment link:", paymentLink);
-
-    // -------------------------------------------------
-    // VERIFY OUR COURSE PAYMENT
-    // -------------------------------------------------
 
     if (
-      paymentLink.status !== "paid" ||
-      paymentLink.amount !== 14900
+      payment.status !== "captured" ||
+      payment.amount !== 14900 ||
+      payment.currency !== "INR" ||
+      payment.order_id !== razorpay_order_id
     ) {
-      return res.status(403).send(
-        "Payment is not valid for this course."
-      );
+      return res.status(403).json({
+        success: false,
+        message: "Invalid course payment."
+      });
     }
 
-    // -------------------------------------------------
-    // CREATE ACCESS
-    // -------------------------------------------------
-
+    // Give browser access
     const token =
       createAccessToken(razorpay_payment_id);
 
@@ -205,126 +191,42 @@ app.get("/payment/callback", async (req, res) => {
     );
 
     console.log(
-      "Course access granted:",
+      "COURSE ACCESS GRANTED:",
       razorpay_payment_id
     );
 
-    return res.redirect("/course-access.html");
-
-  } catch (error) {
-
-    console.error(
-      "Payment verification error:",
-      error
-    );
-
-    return res.status(500).send(
-      "Unable to verify payment."
-    );
-  }
-});
-
-// =====================================================
-// PAYMENT RECOVERY
-// =====================================================
-// This is for a payment that succeeded but Razorpay
-// did not redirect the customer correctly.
-// =====================================================
-
-app.get("/payment/recover", async (req, res) => {
-  try {
-    const paymentId = req.query.payment_id;
-
-    if (!paymentId) {
-      return res.status(400).send("Payment ID required.");
-    }
-
-    console.log("Recovery requested:", paymentId);
-
-    // Fetch actual payment
-    const payment = await razorpay.payments.fetch(paymentId);
-
-    console.log("Payment status:", payment.status);
-    console.log("Payment amount:", payment.amount);
-
-    // Verify successful ₹149 payment
-    if (
-      payment.status !== "captured" ||
-      payment.amount !== 14900 ||
-      payment.currency !== "INR"
-    ) {
-      return res.status(403).send(`
-        <h2>Payment could not be verified.</h2>
-        <p>This is not a valid ₹149 successful payment.</p>
-      `);
-    }
-
-    // Find the Payment Link connected to this payment ID
-    const result = await razorpay.paymentLink.all({
-      payment_id: paymentId
+    res.json({
+      success: true,
+      redirect: "/course-access.html"
     });
 
-    console.log("Payment links found:", result);
-
-    const links = result.payment_links || [];
-
-    const courseLink = links.find(
-      link =>
-        link.id === "plink_TaNFbzMP9JP4eG" &&
-        link.amount === 14900 &&
-        link.status === "paid"
-    );
-
-    if (!courseLink) {
-      return res.status(403).send(`
-        <h2>Course payment link not found.</h2>
-        <p>The payment was successful, but it could not be matched to the course payment link.</p>
-      `);
-    }
-
-    // Create permanent browser access
-    const token = createAccessToken(paymentId);
-
-    res.setHeader(
-      "Set-Cookie",
-      `course_access=${token}; Max-Age=315360000; HttpOnly; SameSite=Lax; Path=/; Secure`
-    );
-
-    console.log("COURSE ACCESS GRANTED:", paymentId);
-
-    return res.redirect("/course-access.html");
-
   } catch (error) {
-    console.error("Recovery error:", error);
+    console.error("Verify payment error:", error);
 
-    return res.status(500).send(`
-      <h2>Payment recovery failed.</h2>
-      <p>Please check the Render logs.</p>
-    `);
+    res.status(500).json({
+      success: false,
+      message: "Unable to verify payment."
+    });
   }
 });
 
-// =====================================================
-// SERVER STATUS
-// =====================================================
+// ==========================================
+// STATUS
+// ==========================================
 
 app.get("/status", (req, res) => {
-
   res.json({
     success: true,
     message: "AI Learning Hub server is running"
   });
-
 });
 
-// =====================================================
-// START SERVER
-// =====================================================
+// ==========================================
+// START
+// ==========================================
 
 app.listen(PORT, "0.0.0.0", () => {
-
   console.log(
     `AI Learning Hub running on port ${PORT}`
   );
-
 });

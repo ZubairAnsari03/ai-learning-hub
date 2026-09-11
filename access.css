@@ -1,1 +1,335 @@
-*{box-sizing:border-box}body{margin:0;background:#080812;color:#f7f7fb;font-family:Inter,system-ui,sans-serif}header{height:74px;padding:0 6%;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #fff1;background:#090914ee;backdrop-filter:blur(12px)}header a{color:#aaaac0;text-decoration:none;font-size:14px}.logo{color:#fff!important;font-size:18px!important;font-weight:800}.logo:first-letter{display:inline-block}main{width:min(900px,92%);margin:55px auto 80px}.hero{text-align:center;padding:48px 25px;border:1px solid #fff1;border-radius:28px;background:linear-gradient(135deg,#201743,#10101d);box-shadow:0 25px 70px #0005}.ok{width:62px;height:62px;margin:auto auto 20px;display:grid;place-items:center;border-radius:50%;font-size:30px;font-weight:800;background:linear-gradient(135deg,#8b5cf6,#ec4899)}.eyebrow{font-size:11px;letter-spacing:2.4px;color:#c9bbff;font-weight:800;margin:0 0 9px}.hero h1{font-size:clamp(32px,6vw,54px);letter-spacing:-1.7px;margin:0}.hero>p:last-child{color:#aaaabd;line-height:1.6;max-width:600px;margin:15px auto 0}.title{display:flex;justify-content:space-between;align-items:end;margin:50px 0 18px}.title h2{margin:0;font-size:29px}.title>span{border:1px solid #fff2;border-radius:99px;padding:8px 12px;color:#c8c8da;font-size:12px}.parts{display:grid;gap:11px}.part{display:flex;align-items:center;gap:16px;padding:17px;border:1px solid #fff1;border-radius:17px;background:#121223d9}.part>b{width:48px;height:48px;display:grid;place-items:center;border-radius:14px;background:#8b5cf61f;color:#cbbfff}.part div{flex:1}.part strong{display:block;font-size:15px}.part small{color:#9999b0;font-size:12px}.part a{padding:11px 14px;border-radius:11px;background:linear-gradient(135deg,#8b5cf6,#ec4899);color:#fff;text-decoration:none;font-size:12px;font-weight:750}.part a[href="#"]{opacity:.5;pointer-events:none}.note{margin-top:22px;padding:17px;border:1px solid #8b5cf633;border-radius:15px;background:#8b5cf610}.note b{font-size:13px}.note span{display:block;color:#9999b0;font-size:12px;margin-top:5px}footer{text-align:center;border-top:1px solid #fff1;padding:25px;color:#77778d;font-size:12px}@media(max-width:650px){main{margin-top:30px}.hero{padding:38px 18px}.part{flex-wrap:wrap}.part a{margin-left:64px}.title h2{font-size:24px}}
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #080812;
+  color: #f7f7fb;
+  font-family: Inter, system-ui, sans-serif;
+}
+
+header {
+  height: 74px;
+  padding: 0 6%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #fff1;
+  background: #090914ee;
+  backdrop-filter: blur(12px);
+}
+
+header a {
+  color: #aaaac0;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.logo {
+  color: #fff !important;
+  font-size: 18px !important;
+  font-weight: 800;
+}
+
+main {
+  width: min(900px, 92%);
+  margin: 55px auto 80px;
+}
+
+/* =========================
+   PAYMENT SUCCESS HERO
+========================= */
+
+.hero {
+  text-align: center;
+  padding: 48px 25px;
+  border: 1px solid #fff1;
+  border-radius: 28px;
+  background: linear-gradient(135deg, #201743, #10101d);
+  box-shadow: 0 25px 70px #0005;
+}
+
+.ok {
+  width: 62px;
+  height: 62px;
+  margin: auto auto 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 30px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #8b5cf6, #ec4899);
+}
+
+.eyebrow {
+  font-size: 11px;
+  letter-spacing: 2.4px;
+  color: #c9bbff;
+  font-weight: 800;
+  margin: 0 0 9px;
+}
+
+.hero h1 {
+  font-size: clamp(32px, 6vw, 54px);
+  letter-spacing: -1.7px;
+  margin: 0;
+}
+
+.hero > p:last-child {
+  color: #aaaabd;
+  line-height: 1.6;
+  max-width: 600px;
+  margin: 15px auto 0;
+}
+
+/* =========================
+   DOWNLOAD FIRST NOTE
+========================= */
+
+.download-note {
+  margin-top: 25px;
+  padding: 22px 24px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  border: 1px solid #f59e0b66;
+  border-radius: 18px;
+  background: linear-gradient(
+    135deg,
+    #f59e0b18,
+    #8b5cf610
+  );
+}
+
+.download-icon {
+  min-width: 52px;
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: #f59e0b22;
+  font-size: 25px;
+}
+
+.download-note h2 {
+  margin: 0 0 7px;
+  font-size: 16px;
+  letter-spacing: .3px;
+}
+
+.download-note p {
+  margin: 0 0 7px;
+  color: #aaaabd;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.download-note strong {
+  color: #f7c66a;
+  font-size: 13px;
+}
+
+/* =========================
+   COURSE TITLE
+========================= */
+
+.title {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  margin: 50px 0 18px;
+}
+
+.title h2 {
+  margin: 0;
+  font-size: 29px;
+}
+
+.title > span {
+  border: 1px solid #fff2;
+  border-radius: 99px;
+  padding: 8px 12px;
+  color: #c8c8da;
+  font-size: 12px;
+}
+
+/* =========================
+   COURSE PARTS
+========================= */
+
+.parts {
+  display: grid;
+  gap: 11px;
+}
+
+.part {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 17px;
+  border: 1px solid #fff1;
+  border-radius: 17px;
+  background: #121223d9;
+  transition: .2s ease;
+}
+
+.part:hover {
+  border-color: #8b5cf655;
+  transform: translateY(-1px);
+}
+
+.part > b {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: #8b5cf61f;
+  color: #cbbfff;
+}
+
+.part > div:not(.actions) {
+  flex: 1;
+}
+
+.part strong {
+  display: block;
+  font-size: 15px;
+}
+
+.part small {
+  color: #9999b0;
+  font-size: 12px;
+}
+
+/* =========================
+   BUTTONS
+========================= */
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.actions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 95px;
+  padding: 11px 14px;
+  border-radius: 11px;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 750;
+  transition: .2s ease;
+}
+
+.download-btn {
+  background: linear-gradient(135deg, #8b5cf6, #ec4899);
+  color: #fff;
+}
+
+.download-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px #8b5cf644;
+}
+
+.open-btn {
+  background: #ffffff0c;
+  border: 1px solid #ffffff22;
+  color: #ddddee;
+}
+
+.open-btn:hover {
+  background: #ffffff18;
+  border-color: #8b5cf666;
+}
+
+/* =========================
+   PAYMENT VERIFIED NOTE
+========================= */
+
+.note {
+  margin-top: 22px;
+  padding: 17px;
+  border: 1px solid #8b5cf633;
+  border-radius: 15px;
+  background: #8b5cf610;
+}
+
+.note b {
+  font-size: 13px;
+}
+
+.note span {
+  display: block;
+  color: #9999b0;
+  font-size: 12px;
+  margin-top: 5px;
+}
+
+/* =========================
+   FOOTER
+========================= */
+
+footer {
+  text-align: center;
+  border-top: 1px solid #fff1;
+  padding: 25px;
+  color: #77778d;
+  font-size: 12px;
+}
+
+/* =========================
+   MOBILE
+========================= */
+
+@media (max-width: 650px) {
+
+  main {
+    margin-top: 30px;
+  }
+
+  .hero {
+    padding: 38px 18px;
+  }
+
+  .download-note {
+    align-items: flex-start;
+    padding: 18px;
+  }
+
+  .download-note h2 {
+    font-size: 14px;
+  }
+
+  .title {
+    align-items: center;
+  }
+
+  .title h2 {
+    font-size: 24px;
+  }
+
+  .part {
+    flex-wrap: wrap;
+  }
+
+  .part > div:not(.actions) {
+    min-width: calc(100% - 70px);
+  }
+
+  .actions {
+    width: 100%;
+    margin-left: 64px;
+  }
+
+  .actions a {
+    flex: 1;
+  }
+}
