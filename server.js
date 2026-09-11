@@ -83,7 +83,7 @@ app.use(express.static(__dirname));
 // CREATE ₹149 RAZORPAY ORDER
 // ==========================================
 
-app.post("/create-order", async (req, res) => {
+app.post("/api/create-order", async (req, res) => {
   try {
     const order = await razorpay.orders.create({
       amount: 14900,
@@ -118,7 +118,7 @@ app.post("/create-order", async (req, res) => {
 // VERIFY PAYMENT
 // ==========================================
 
-app.post("/verify-payment", async (req, res) => {
+app.post("/api/verify-payment", async (req, res) => {
   try {
     const {
       razorpay_order_id,

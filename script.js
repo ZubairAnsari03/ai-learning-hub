@@ -129,4 +129,107 @@ modules.forEach((m, i) => {
   });
   list.appendChild(el);
 });
+// ===============================
+// RAZORPAY PAYMENT
+// ===============================
 
+const payBtn = document.getElementById("payBtn");
+
+if (payBtn) {
+  payBtn.addEventListener("click", async () => {
+    try {
+      payBtn.disabled = true;
+      payBtn.textContent = "Opening Payment...";
+
+      const orderResponse = await fetch("/api/create-order", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        }
+      });
+
+      const orderData = await orderResponse.json();
+
+      if (!orderResponse.ok || !orderData.success) {
+        throw new Error(orderData.message || "Unable to create payment order.");
+      }
+
+      const options = {
+        key: orderData.keyId,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: "AI Learning Hub",
+        description: "AI/ML Engineer Course",
+        order_id: orderData.orderId,
+
+        handler: async function (response) {
+          try {
+            const verifyResponse = await fetch("/api/verify-payment", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify(response)
+            });
+
+            const verifyData = await verifyResponse.json();
+
+            if (!verifyResponse.ok || !verifyData.success) {
+              throw new Error(
+                verifyData.message || "Payment verification failed."
+              );
+            }
+
+            window.location.href = "/course-access.html";
+
+          } catch (error) {
+            console.error(error);
+            alert(
+              "Payment ho gaya, lekin verification mein problem aayi. Please contact support."
+            );
+
+            payBtn.disabled = false;
+            payBtn.textContent = "Continue to Payment →";
+          }
+        },
+
+        modal: {
+          ondismiss: function () {
+            payBtn.disabled = false;
+            payBtn.textContent = "Continue to Payment →";
+          }
+        },
+
+        theme: {
+          color: "#8b5cf6"
+        }
+      };
+
+      const razorpay = new Razorpay(options);
+
+      razorpay.on("payment.failed", function (response) {
+        console.error("Payment failed:", response.error);
+
+        alert(
+          response.error?.description ||
+          "Payment failed. Please try again."
+        );
+
+        payBtn.disabled = false;
+        payBtn.textContent = "Continue to Payment →";
+      });
+
+      razorpay.open();
+
+    } catch (error) {
+      console.error("Payment error:", error);
+
+      alert(
+        error.message || "Unable to start payment. Please try again."
+      );
+
+      payBtn.disabled = false;
+      payBtn.textContent = "Continue to Payment →";
+    }
+  });
+}
